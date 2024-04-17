@@ -6,13 +6,14 @@ from config import *
 from prompt import *
 from utils import *
 
-from langchain.agents import ZeroShotAgent, AgentExecutor
+from langchain.agents import AgentExecutor, create_react_agent
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.chains.llm_requests import LLMRequestsChain
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma
 from langchain.tools import Tool
 from langchain.memory import ConversationBufferMemory
+from langchain import hub
 
 
 class Agent():
@@ -31,7 +32,7 @@ class Agent():
             prompt=prompt,
             verbose=os.getenv("VERBOSE")
         )
-        return chain.run({"question": question})
+        return chain.invoke({"question": question})["text"]
 
     # 向量数据库检索回答
     def retrieval_func(self, question):
@@ -45,7 +46,7 @@ class Agent():
             prompt=prompt,
             verbose=os.getenv("VERBOSE")
         )
-        res = chain.run({"retrieval_results": retrieval_results, "question": question})
+        res = chain.invoke({"retrieval_results": retrieval_results, "question": question})["text"]
         return res
 
     # Neo4j数据库知识图谱查询（待完善）
@@ -72,11 +73,11 @@ class Agent():
             prompt=ner_prompt,
             verbose=os.getenv("VERBOSE")
         )
-        res = chain.run({"question": question})
+        res = chain.invoke({"question": question})["text"]
         ner_res = output_parser.parse(res)
         return ner_res
 
-    # 利用google进行搜索查询
+    # 利用360进行搜索查询
     def search_func(self, question):
         prompt = PromptTemplate.from_template(SEARCH_PROMPT_TPL)
         llm_chain = LLMChain(
@@ -90,9 +91,9 @@ class Agent():
         )
         inputs = {
             "question": question,
-            "url": "https://www.google.com.hk/search?q=" + question.replace(" ", "+")
+            "url": "https://www.so.com/s?q=" + question.replace(" ", "+")
         }
-        res = request_chain.run(inputs)
+        res = request_chain.invoke(inputs)["output"]
         return res
 
     # 定义agent模块
@@ -117,39 +118,64 @@ class Agent():
         ]
 
         # 定义agent
-        prefix = """请用中文尽你所能回答下列问题，可以使用以下工具"""
-        suffix = """开始
-        History: {chat_history}
-        Question: {human_input}
-        Thought: {agent_scratchpad}
-        """
-        agent_prompt = ZeroShotAgent.create_prompt(
-            tools=tools,
-            prefix=prefix,
-            suffix=suffix,
-            input_variables=["chat_history", "human_input", "agent_scratchpad"]
-        )
-        # 第一个chain用来agent预测
-        llm_chain = LLMChain(
+        prompt = hub.pull('hwchase17/react-chat')
+        prompt.template = "请用中文回答问题！Final Answer 必须尊重 Observation 的结果，不能改变语意\n\n" + prompt.template
+        # 将ZeroShotAgent替换为create_react_agent
+        agent = create_react_agent(
             llm=get_llm_model(),
-            prompt=agent_prompt,
-            verbose=os.getenv("VERBOSE")
+            prompt=prompt,
+            tools=tools
         )
-        agent = ZeroShotAgent(llm_chain=llm_chain)
-
-        # 定义memory组件
         memory = ConversationBufferMemory(memory_key="chat_history")
 
-        # 定义AgentExecutor，第二个chain用来agent执行
-        agent_chain = AgentExecutor.from_agent_and_tools(
+        # 定义AgentExecutor
+        agent_executor = AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=tools,
             memory=memory,
-            verbose=os.getenv("VERBOSE"),
-            handle_parsing_errors=True
+            handle_parsing_errors=True,
+            verbose=os.getenv("VERBOSE")
         )
-        res = agent_chain.run({"human_input": question})
+
+        res = agent_executor.invoke({"input": question})["output"]
         return res
 
+        # # 定义agent
+        # prefix = """请用中文尽你所能回答下列问题，可以使用以下工具"""
+        # suffix = """开始
+        # History: {chat_history}
+        # Question: {human_input}
+        # Thought: {agent_scratchpad}
+        # """
+        # agent_prompt = ZeroShotAgent.create_prompt(
+        #     tools=tools,
+        #     prefix=prefix,
+        #     suffix=suffix,
+        #     input_variables=["chat_history", "human_input", "agent_scratchpad"]
+        # )
+        # # 第一个chain用来agent预测
+        # llm_chain = LLMChain(
+        #     llm=get_llm_model(),
+        #     prompt=agent_prompt,
+        #     verbose=os.getenv("VERBOSE")
+        # )
+        # agent = ZeroShotAgent(llm_chain=llm_chain)
+        #
+        # # 定义memory组件
+        # memory = ConversationBufferMemory(memory_key="chat_history")
+        #
+        # # 定义AgentExecutor，第二个chain用来agent执行
+        # agent_chain = AgentExecutor.from_agent_and_tools(
+        #     agent=agent,
+        #     tools=tools,
+        #     memory=memory,
+        #     verbose=os.getenv("VERBOSE"),
+        #     handle_parsing_errors=True
+        # )
+        # res = agent_chain.run({"human_input": question})
+        # return res
 
 
+if __name__ == '__main__':
+    agent = Agent()
+    print(agent.retrieval_func("供应商针对单一来源异议被驳回，可以再次异议吗？"))

@@ -26,7 +26,7 @@ class Service():
         chat_history = ''
         for question, answer in history[-2:]:
             chat_history += f"问题:{question}, 答案:{answer}\n"
-        res = chain.run({"chat_history": chat_history, "question": message})
+        res = chain.invoke({"chat_history": chat_history, "question": message})["text"]
         return res
 
     def answer(self, message, history):

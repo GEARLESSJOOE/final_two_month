@@ -1,5 +1,5 @@
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings  # 更改最新langchain框架中的倒包路径，直接使用浪chain_openai导入
+from langchain_openai import ChatOpenAI
 from py2neo import Graph
 from config import *
 
