@@ -3,7 +3,7 @@ from glob import glob
 from langchain.vectorstores.chroma import Chroma
 from langchain.document_loaders import TextLoader, PyMuPDFLoader, CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from Tender_Bot.utils import get_embeddings_model
+from utils import get_embeddings_model
 
 
 # 定义文本转向量方法
