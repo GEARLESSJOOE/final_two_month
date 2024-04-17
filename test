@@ -1,1 +1,13 @@
-1
+OPENAI_API_KEY = ""
+OPENAI_BASE_URL = 'https://api.openai-proxy.com/v1'
+
+EMBEDDINGS_MODEL = 'openai'
+OPENAI_EMBEDDINGS_MODEL = 'text-embedding-ada-002'
+
+LLM_MODEL = 'openai'
+OPENAI_LLM_MODEL = 'gpt-3.5-turbo-1106'
+
+TEMPERATURE = 0
+MAX_TOKENS = 1000
+
+VERBOSE = True
