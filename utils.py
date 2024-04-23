@@ -31,7 +31,7 @@ def get_llm_model():
 
 def structured_output_parser(response_schemas):
     text = """
-    1. 请从以下文本，抽取出实体信息，并按照json格式输出，json包含首尾的"'''json"和"'''"
+    1. 请从以下文本，抽取出实体信息，并按照json格式输出，json包含首尾的"'''json"和"'''"，其中"'''json"不允许换行
     2. 注意：根据用户输入的事实抽取内容，不要推理，不要补充信息，句子中如果不存在该实体，就输出空字段
     3. 以下是字段含义和类型，要求输出的json中，必须包含下列所有字段 \n
     """
