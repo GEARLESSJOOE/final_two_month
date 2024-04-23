@@ -1,5 +1,4 @@
 import json
-
 from config import *
 from py2neo import Graph
 from collections import defaultdict
@@ -74,8 +73,27 @@ class BuildGraph():
             """
             self.graph.run(cql)
 
+    # 保存实体
+    def dump_tenderee_entitty(self):
+        tender_entity = []
+        winner_entity = []
+        for label, entity_lst in self.entity_data.items():
+            if label == "Tender":
+                tender_entity += [entity["tenderee"] for entity in entity_lst]
+            else:
+                winner_entity += [entity["winning_company"] for entity in entity_lst]
+
+        # 保存Tenderee实体
+        with open(TENDER_ENTITY_PATH, 'w', encoding="utf-8") as file:
+            file.write("\n".join(tender_entity))
+
+        # 保存Wining_company实体
+        with open(WINNER_ENTITY_PATH, 'w', encoding="utf-8") as file:
+            file.write("\n".join(winner_entity))
+
 
 if __name__ == '__main__':
     bg = BuildGraph()
     # bg.create_entity()
-    bg.create_relation()
+    # bg.create_relation()
+    bg.dump_tenderee_entitty()
