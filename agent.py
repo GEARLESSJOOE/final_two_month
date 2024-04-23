@@ -1,6 +1,7 @@
 import os.path
 
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+from question_match import GraphQA
 
 from config import *
 from prompt import *
@@ -49,33 +50,55 @@ class Agent():
         res = chain.invoke({"retrieval_results": retrieval_results, "question": question})["text"]
         return res
 
-    # Neo4j数据库知识图谱查询（待完善）
-    def graph_func(self, question):
-        # 命名实体识别
-        response_schemas = [
-            ResponseSchema(type="list", name="policy", description="国家政策实体"),
-            ResponseSchema(type="list", name="commodity", description="商品名称实体"),
-            ResponseSchema(type="list", name="company", description="公司名称实体")
-        ]
-        # 格式化模版
-        format_instructions = structured_output_parser(response_schemas=response_schemas)
+    # Neo4j数据库知识图谱查询
+    def graph_func(self, x, question):
+        # 替换langchain，手写知识图谱查询
+        qa = GraphQA()
+        answer = qa.query(question)
 
-        # 设置解析器
-        output_parser = StructuredOutputParser(response_schemas=response_schemas)
-
-        ner_prompt = PromptTemplate(
-            template=NER_PROMPT_TPL,
-            partial_variables={"format_instructions": format_instructions},
+        graph_prompt = PromptTemplate(
+            template=GRAPH_SUMMARY_TPL,
+            partial_variables={"full_information": answer},
             input_variables=["question"]
         )
+
         chain = LLMChain(
             llm=get_llm_model(),
-            prompt=ner_prompt,
+            prompt=graph_prompt,
             verbose=os.getenv("VERBOSE")
         )
-        res = chain.invoke({"question": question})["text"]
-        ner_res = output_parser.parse(res)
-        return ner_res
+
+        res = chain.invoke({"question": question})['text']
+        return res
+        # 命名实体识别(langchain实现)
+        # response_schemas = [
+        #     ResponseSchema(type="list", name="tender_name", description="招标项目实体"),
+        #     ResponseSchema(type="list", name="winning_company", description="中标公司实体"),
+        #     ResponseSchema(type="list", name="winning_price", description="中标金额实体")
+        # ]
+        # # 格式化模版
+        # format_instructions = structured_output_parser(response_schemas=response_schemas)
+        #
+        # # 设置解析器
+        # output_parser = StructuredOutputParser(response_schemas=response_schemas)
+        #
+        # ner_prompt = PromptTemplate(
+        #     template=NER_PROMPT_TPL,
+        #     partial_variables={"format_instructions": format_instructions},
+        #     input_variables=["question"]
+        # )
+        # chain = LLMChain(
+        #     llm=get_llm_model(),
+        #     prompt=ner_prompt,
+        #     verbose=os.getenv("VERBOSE")
+        # )
+        # res = chain.invoke({"question": question})["text"]
+        # # print(res)
+        # # exit()
+        # ner_res = output_parser.parse(res)  # 必须按照首'''json尾'''进行查找
+        # # print(ner_res)
+        # # exit()
+        # return ner_res
 
     # 利用360进行搜索查询
     def search_func(self, question):
@@ -109,6 +132,11 @@ class Agent():
                 name="retrieval_func",
                 func=self.retrieval_func,
                 description="当用户输入招标领域内的专业问题时，比如，供应商异议驳回，政府采购方式，招标通知书效力等问题时，你应该调用该工具"
+            ),
+            Tool(
+                name="graph_func",
+                func=lambda x: self.graph_func(x, question),
+                description="当用户询问某公司所拥有的招标项目或者某公司得到了哪些公司招标项目时，你应该调用该工具"
             ),
             Tool(
                 name="search_func",
@@ -178,4 +206,9 @@ class Agent():
 
 if __name__ == '__main__':
     agent = Agent()
-    print(agent.retrieval_func("供应商针对单一来源异议被驳回，可以再次异议吗？"))
+    # print(agent.retrieval_func("供应商针对单一来源异议被驳回，可以再次异议吗？"))
+    # print(agent.graph_func("中南建筑设计院股份有限公司赢得了华中农业大学学生宿舍及生活配套设施项目方案设计华中农业大学学生宿舍及生活配套设施项目方案，价格为198989"))
+    # agent.graph_func("zhangjunfeng")
+    # agent.query("武汉斯泰德建设科技有限公司, 武汉江腾铁路工程有限责任公司得到了哪些公司的项目？")
+    agent.query("武汉天河机场有限责任公司招标项目都有哪些？")
+    # print(agent.graph_func("武汉斯泰德建设科技有限公司, 武汉江腾铁路工程有限责任公司得到了哪些公司的项目？"))
