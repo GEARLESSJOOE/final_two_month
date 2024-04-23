@@ -19,7 +19,7 @@ demo = gr.ChatInterface(
     chatbot=gr.Chatbot(height=400, bubble_full_width=False),
     theme=gr.themes.Default(spacing_size='sm', radius_size='sm'),
     textbox=gr.Textbox(placeholder="在此输入您的问题", container=False, scale=7),
-    examples=['你好，你叫什么名字？', '供应商针对单一来源异议被驳回，可以再次异议吗？', 'langchain是什么？'],
+    examples=['你好，你叫什么名字？', '供应商针对单一来源异议被驳回，可以再次异议吗？', 'langchain是什么？', '武汉天河机场有限责任公司都有哪些招标项目？'],
     submit_btn=gr.Button('提交', variant='primary'),
     clear_btn=gr.Button('清空记录'),
     retry_btn=None,
